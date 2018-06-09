@@ -1,0 +1,6 @@
+Fork de la aventura interactiva "Felicidades Miguel" a Python.
+
+Se usa como un bot de Telegram: @jblasbot
+API utilizada: pyTelegramBotAPI
+
+## ELIMINADO TOKEN DE TELEGRAM POR SEGURIDAD ##
