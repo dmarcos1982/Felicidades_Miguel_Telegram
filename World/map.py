@@ -107,5 +107,16 @@ Sobre la mesa hay una J y un 4 y el crupier te pregunta: *¿Pides carta o te pla
         'DOWN': '',
         'LEFT': '',
         'RIGHT': '',
-        }
+        },
+    'z0': {
+        'NAME': '*Residencia Universitaria Alfonso VIII*',
+        'DESCRIPTION': 'La Residencia Universitaria Alfonso VIII siempre es un buen refugio para hombres como tú en tus circunstancias. Aspiras el aroma a comida de hospital que se difunde sin escapatoria por sus pasillos cuando te topas de frente con el director.\n\n_Pero... ¡Señor Tutor de Planta! ¿Qué hace ahí con las manos en los bolsillos? ¿Ha terminado la tarea que le encomendé?_\n\nTe quedas perplejo ante tal pregunta... *¿Qué tarea te había encomendado el director?*',
+        'EXAMINATION': 'Description after examine',
+        'VISITED': False,
+        'SOLVED': False,
+        'UP': '',
+        'DOWN': '',
+        'LEFT': '',
+        'RIGHT': ''
+    }
 }

@@ -1,3 +1,4 @@
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 
 # Importamos el mapa
@@ -13,9 +14,14 @@ import time
 from threading import Timer
 # Libreria para los numeros aleatorios
 from random import randint
+# Librerias para correr el bot en threads
+import threading
+from time import sleep
 
-# Token del bot
-TOKEN = 'BotToken'
+# Token y otros parametros del bot
+TOKEN = ''
+BOT_INTERVAL = 3
+BOT_TIMEOUT = 30
 
 
 # Creamos la clase del jugador
@@ -30,6 +36,7 @@ class player():
         self.trasteroQuestionsAnswered = 0
         self.testarrosaSung = 0
         self.diabolicHen = 0
+        self.falloAlfonso8 = 0
 
 # Instanciamos el jugador
 myPlayer = player()
@@ -46,6 +53,7 @@ def game_initialize():
     myPlayer.trasteroQuestionsAnswered = 0
     myPlayer.testarrosaSung = 0
     myPlayer.diabolicHen = 0
+    myPlayer.falloAlfonso8 = 0
 
 
 # Creamos una lista de articulos para manejar los objetos
@@ -55,6 +63,23 @@ articleList = ['el', 'la', 'los', 'las', 'un', 'una']
 bot = telebot.TeleBot(TOKEN)
 
 
+def bot_polling():
+    #global bot #Keep the bot object as global variable if needed
+    print("Starting bot polling now")
+    while True:
+        try:
+            print("New @jblasbot instance started")
+            bot = telebot.TeleBot(TOKEN) #Generate new bot instance
+            bot.set_update_listener(listener)
+            bot.polling(none_stop=True, interval=BOT_INTERVAL, timeout=BOT_TIMEOUT)
+        except Exception as ex: #Error in polling
+            print("Bot polling failed, restarting in {}sec. Error:\n{}".format(BOT_TIMEOUT, ex))
+            bot.stop_polling()
+            sleep(BOT_TIMEOUT)
+        else: #Clean exit
+            bot.stop_polling()
+            print("Bot polling loop finished")
+            break #End loop
 
 # Texto de introduccion
 display_intro = """Has tenido la inmensa suerte de encontrar a tu media naranja y, además, esta chica que te comprende, que llena tus noches y tus sueños, ha accedido a casarse contigo.\n
@@ -63,6 +88,10 @@ Esta mañana Estefanía te ha dado el 'Sí, quiero' en su resplandeciente vestid
 Tu deslumbrante esposa está dándolo todo en la pista con sus amigas mientras las inconfundibles voces de 'Siempre Así' a todo volumen hacen casi imposible el mantener una conversación. Así, no has entendido una sola palabra de las que te ha dicho un joven, más o menos de la edad de Estefanía, al tiempo que te encasquetaba un voluminoso paquete envuelto en papel de regalo. No tienes ni idea de quién era el chico, pero bueno, te pasa con muchos de los invitados, así que das por supuesto que se trata de algún primo lejano de tu mujer.\n
 Como la canción de 'Siempre Así' es larguísima y tú no tienes nada mejor que hacer en ese momento, empiezas a romper el envoltorio del regalo que acabas de recibir, mientras recuerdas la sospechosa mirada de la persona que te lo ha dado… No sabes decir el qué pero hay algo raro en ese chico… Tienes ante ti una caja de cartón normal y corriente. Levantas la tapa y…\n\n"""
 
+
+# Funcion para mostrar la ayuda
+def display_help(m):
+    bot.send_message(m.chat.id, '\n- Siempre que quieras indicar algo con un verbo, usa el *verbo en infinitivo*.\n- Las opciones para moverte son los 4 puntos cardinales.\n- Hay preguntas que se pueden responder con *sí* o *no*.', parse_mode='Markdown')
 
 # Funcion para mostrar nombre de la habitacion y descripcion
 def introduce_room(m):
@@ -73,11 +102,16 @@ def introduce_room(m):
 # Teleco
 # PROBABLEMENTE MODIFIQUE EL QUE SE PUEDA RESPONDER DIRECTAMENTE CON EL VALOR, SIN TENER QUE PONER RESPONDER, CONTESTAR O ESCRIBIR ANTES
 def room_examen(m):
-    # Si expira el timer inicializamos el juego y muere miserablemente
+    # Si expira el timer, vamos al Alfonso VIII
     def timeout():
         if myPlayer.examenStarted is True:
-            game_initialize()
-            bot.send_message(m.chat.id, "El tiempo del examen ha expirado. Juan Blas va recogiendo los exámenes por los pupitres. Cuando llega a tu puesto, tú te aferras al folio porque no lo has rellenado y realmente quieres hacer ese examen y terminar la carrera de una puñetera vez. El breve tira y afloja es vencido por Juan Blas, que tira con decisión de la hoja de papel y te deja un corte horrendo en la palma de la mano. No tienes al día las dosis de recuerdo de la vacuna antitetánica. La herida se te infecta y *mueres miserablemente*.\n\nIntroduce _/start_ para iniciar de nuevo el juego.")
+            tExamen.cancel()
+            myPlayer.examenStarted = False
+            bot.send_message(m.chat.id, "El tiempo del examen ha expirado. Juan Blas va recogiendo los exámenes por los pupitres. Cuando llega a tu puesto, tú te aferras al folio porque no lo has rellenado y realmente quieres hacer ese examen y terminar la carrera de una puñetera vez. El breve tira y afloja es vencido por Juan Blas, que tira con decisión de la hoja de papel y te arranca el exámen de las manos. ¿Y qué vas a hacer ahora? Como no tienes respuesta a esa pregunta, decides ir a un lugar en el que te sientes seguro...")
+            map.zonemap[myPlayer.location]['VISITED'] = True
+            myPlayer.location = 'z0'
+            time.sleep(2)
+            introduce_room(m)
 
     # Inicializamos el timer del examen
     tExamen = Timer(300.0, timeout)
@@ -128,15 +162,55 @@ def room_examen(m):
                 myPlayer.location = 'b3'
                 time.sleep(2)
                 introduce_room(m)
+            # Si responde incorrectamente, muere miserablemente
+            else:
+                bot.send_message(m.chat.id, 'Tu respuesta es tan absurda que cuando Juan Blas corrige el examen monta en cólera. En tantos años de exposición a ondas electromagnéticas, ha desarrollado superpoderes como los de Hulk y el mal humor le hace multiplicar su tamaño por 10000 y su fuerza por 1E-06. El edificio de teleco revienta con su crecimiento y toda Castilla y León desaparece con el primer paso que da. Con el segundo paso hace desestabilizar el eje de La Tierra, que interrumpe su rotación y se sale de su órbita. Aún mucho antes de que el planeta azul llegue a chocar contra el rojo, la vida en La Tierra ya se ha hecho imposible debido a los desórdenes climatológicos. Todos los seres vivos, incluidos Estefanía y tú, *desaparecen miserablemente*.\n\nIntroduce _/start_ para iniciar de nuevo el juego.', parse_mode='Markdown')
+                game_initialize()
 
     # Si quiere hablar con Juan Blas
     elif mSplit[0] == "decir":
-        # Si decide no presentar vamos al Alfonso VIII
+        # Si decide no presentar, paramos el temporizador y vamos al Alfonso VIII
         if ((mSplit[1] == 'no') and (mSplit[2] == 'presentar')):
-            bot.send_message(m.chat.id, "Alfonso VIII")
+            tExamen.cancel()
+            myPlayer.examenStarted = False
+            bot.send_message(m.chat.id, "Entregas el exámen con una mezcla entre alivio y tristeza por no haber sido capaz de completarlo. Con la mente hecha un lío decides vagar sin rumbo fijo...")
+            map.zonemap[myPlayer.location]['VISITED'] = True
+            myPlayer.location = 'z0'
+            time.sleep(2)
+            introduce_room(m)
         # Cualquier otra cosa que diga, Juan Blas le dice que solo hay una cosa que entiende
         else:
             bot.send_message(m.chat.id, "Juan Blas te mira con mala cara y te dice: _Si quieres irte y 'no presentar' no tienes mas que decirlo_", parse_mode='Markdown')
+
+
+# Alfonso VIII
+def room_alfonso8(m):
+    # Comandos que entendemos en esta habitacion
+    acceptableAlfonso8Actions = ['poner']
+
+    # Cogemos el texto que nos ha enviado y lo dividimos en palabras
+    mSplit = m.text.lower().split()
+
+    # Marcamos la habitacion como visitada
+    map.zonemap[myPlayer.location]['VISITED'] = True
+
+    # Si la primera palabra no esta en la lista de los comandos que entendemos, no hacemos nada
+    if mSplit[0] not in acceptableAlfonso8Actions:
+        if 0 <= myPlayer.falloAlfonso8 <= 2:
+            bot.send_message(m.chat.id, "No entiendo eso que dices.")
+            sleep(2)
+            bot.send_message(m.chat.id, "Vamos, que ya venden turrones en los supermercados.")
+            myPlayer.falloAlfonso8 += 1
+        else:
+            bot.send_message(m.chat.id, 'El director te arrea el collejazo del milenio, el cual te deja sin sentido. Nunca lo vuelves a recuperar y *mueres miserablemente*.\n\nIntroduce _/start_ para iniciar de nuevo el juego.', parse_mode='Markdown')
+            game_initialize()
+    else:
+        if ((('decoracion' in mSplit) or (u'decoración' in mSplit)) and (('navidad' in mSplit) or (u'navideña' in mSplit))):
+            bot.send_message(m.chat.id, 'El suelo de la Alfonso VIII siempre ha tenido fama por su perpetuo lustre. La escalera a la que te has subido para poner guirnaldas en el techo resbala, se abre como una cáscara de plátano y caes al suelo. El golpe te *mata miserablemente*.\n\nIntroduce _/start_ para iniciar de nuevo el juego.', parse_mode='Markdown')
+            game_initialize()
+        else:
+            bot.send_message(m.chat.id, 'El director te arrea el collejazo del milenio, el cual te deja sin sentido. Nunca lo vuelves a recuperar y *mueres miserablemente*.\n\nIntroduce _/start_ para iniciar de nuevo el juego.', parse_mode='Markdown')
+            game_initialize()
 
 
 # Tenere
@@ -149,7 +223,6 @@ def room_tenere(m):
     # Bucle del blackjack
     def blackjack_loop():
         rNumber = randint(0, 9)
-        print (rNumber)
         if 0 <= rNumber <= 4:
             bot.send_message(m.chat.id, 'El crupier reparte de nuevo. Tienes una buena jugada en la mesa, así que pides otra carta. Pero desde luego hoy no es tu noche y te pasas de nuevo. Pero este estúpido juego no va a poder contigo, ¿o sí? *¿Deseas jugar otra partida?*', parse_mode='Markdown')
         elif 5 <= rNumber <= 9:
@@ -165,7 +238,11 @@ def room_tenere(m):
     elif myPlayer.bjPlayedRounds == 0:
         # Si se planta vamos al Alfonso VIII
         if ((mSplit[0] == 'plantarme') or (mSplit[0] == 'plantarse')):
-            bot.send_message(m.chat.id, "Alfonso VIII")
+            bot.send_message(m.chat.id, "No estás para jueguecitos, así que te plantas y que sea lo que dios quiera. Evidentemente pierdes, pero casi mejor, ¿no? Asqueado de cómo se está desarrollando el día en esta realidad paralela decides ir a un lugar seguro y reconfortante.")
+            map.zonemap[myPlayer.location]['VISITED'] = True
+            myPlayer.location = 'z0'
+            time.sleep(2)
+            introduce_room(m)
         elif ((mSplit[0] == 'si') or (mSplit[0] == u'sí')):
             bot.send_message(m.chat.id, '¿Sí qué?')
         elif mSplit[0] == 'no':
@@ -186,7 +263,11 @@ def room_tenere(m):
             myPlayer.bjPlayedRounds += 1
         # Si decide no jugar vamos al Alfonso VIII
         elif mSplit[0] == 'no':
-            bot.send_message(m.chat.id, "Alfonso VIII")
+            bot.send_message(m.chat.id, "Parece que el croupier está riéndose de tí, o haciendo trampas (o ambas cosas), así que decides que ya es hora de irte a descansar...")
+            map.zonemap[myPlayer.location]['VISITED'] = True
+            myPlayer.location = 'z0'
+            time.sleep(2)
+            introduce_room(m)
         else:
             bot.send_message(m.chat.id, "No entiendo eso que dices")
 
@@ -398,15 +479,26 @@ def room_testarrosa(m):
                 if 'bourbon' in mSplit:
                     if 'dos botellas de bourbon' in myPlayer.inventory:
                         bot.send_message(m.chat.id, 'Has emborrachado a la gallina y por fin te ha dejado de molestar, pero el resto de objetos aún bloquean la salida: un *oso panda*, un *palé*, un *enano*, una *oveja* y un *señor disfrazado de hitita*.', parse_mode='Markdown')
+                        myPlayer.inventory.remove ('dos botellas de bourbon')
                         myPlayer.testarrosaSung = 4
                     else:
                         bot.send_message(m.chat.id, 'No encuentro eso que dices.')
+                        sleep (1)
                         bot.send_message(m.chat.id, 'La gallina continúa picoteándote.')
+                        myPlayer.diabolicHen += 1
                 else:
                     bot.send_message(m.chat.id, 'No encuentro eso que dices.')
+                    sleep(1)
                     bot.send_message(m.chat.id, 'La gallina continúa picoteándote.')
+                    myPlayer.diabolicHen += 1
             else:
+                bot.send_message(m.chat.id, 'No entiendo eso que dices.')
+                sleep(1)
                 bot.send_message(m.chat.id, 'La gallina continúa picoteándote.')
+                myPlayer.diabolicHen += 1
+        else:
+            bot.send_message(m.chat.id, '*Mueres miserablemente* picoteado por la gallina.\n\nIntroduce _/start_ para iniciar de nuevo el juego.', parse_mode='Markdown')
+            game_initialize()
 ################################################################################
 
 
@@ -467,6 +559,8 @@ def play_rooms(m):
         room_trastero(m)
     elif myPlayer.location == 'b2':
         room_testarrosa(m)
+    elif myPlayer.location == 'z0':
+        room_alfonso8(m)
 
 
 # Definimos una función llamada 'listener', que recibe como parámetro un dato llamado 'messages'
@@ -486,6 +580,9 @@ def listener(messages):
             bot.send_message(cid, display_intro)
             time.sleep(2)
             introduce_room(m)
+        # Mostramos la ayuda
+        elif m.text == '/help':
+            display_help(m)
         # PARA TESTING EXCLUSIVAMENTE - HAY QUE ELIMINAR ESTOS ELIF
         elif m.text == '/tenere':
             myPlayer.location = 'b3'
@@ -500,14 +597,38 @@ def listener(messages):
             myPlayer.location = 'b1'
             introduce_room(m)
         elif m.text == '/testarrosa':
+            myPlayer.inventory.append('dos botellas de bourbon')
             myPlayer.location = 'b2'
+            introduce_room(m)
+        elif m.text == '/testarrosagallina':
+            myPlayer.inventory.append('dos botellas de bourbon')
+            myPlayer.testarrosaSung = 10
+            myPlayer.location = 'b2'
+            introduce_room(m)
+        elif m.text == '/alfonso8':
+            myPlayer.location = 'z0'
             introduce_room(m)
         else:
             play_rooms(m)
 
 
 # Le decimos al bot que utilice como función escuchadora nuestra función 'listener'
-bot.set_update_listener(listener)
+# bot.set_update_listener(listener)
 
 # Le decimos al bot que siga funcionando incluso si encuentra algún fallo
-bot.polling(none_stop=True)
+# bot.infinity_polling()
+
+
+polling_thread = threading.Thread(target=bot_polling)
+polling_thread.daemon = True
+polling_thread.start()
+
+
+#Keep main program running while bot runs threaded
+if __name__ == "__main__":
+    while True:
+        try:
+            sleep(120)
+        except KeyboardInterrupt:
+            print("\n@jblasbot instance ended")
+            break

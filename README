@@ -4,3 +4,14 @@ Se usa como un bot de Telegram: @jblasbot
 API utilizada: pyTelegramBotAPI
 
 ## ELIMINADO TOKEN DE TELEGRAM POR SEGURIDAD ##
+
+===== CHANGELOG =====
+
+v0.1
+    - Fork de lo hecho en Inform7
+
+v0.2
+    - Gestion de excepciones (Ya nunca crashea, en teoria...)
+    - Ayuda basica
+    - Alfonso VIII implementado
+    - Testarrosa implementado hasta parte de la gallina
